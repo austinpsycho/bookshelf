@@ -156,3 +156,6 @@ _temp_*/**/*
 
 _cache/
 _temp/
+
+#Rider metadata
+.idea/
