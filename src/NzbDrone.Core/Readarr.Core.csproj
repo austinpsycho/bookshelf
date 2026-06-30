@@ -48,4 +48,7 @@
     <EmbeddedResource Include="Books\Calibre\Languages\by3.json" />
     <EmbeddedResource Include="Books\Calibre\Languages\name_map.json" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageVersion Update="MailKit" Version="4.17.0" />
+  </ItemGroup>
 </Project>

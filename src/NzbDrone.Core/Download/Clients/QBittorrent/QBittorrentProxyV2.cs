@@ -351,6 +351,7 @@ namespace NzbDrone.Core.Download.Clients.QBittorrent
             {
                 requestBuilder.NetworkCredential = new BasicNetworkCredential(settings.Username, settings.Password);
             }
+
             return requestBuilder;
         }
 

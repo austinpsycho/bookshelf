@@ -63,7 +63,7 @@
     <PackageVersion Include="System.Runtime.Loader" Version="4.3.0" />
     <PackageVersion Include="System.Security.Principal.Windows" Version="5.0.0" />
     <PackageVersion Include="System.ServiceProcess.ServiceController" Version="6.0.1" />
-    <PackageVersion Include="System.Text.Encoding.CodePages" Version="6.0.0" />
+    <PackageVersion Include="System.Text.Encoding.CodePages" Version="8.0.0" />
     <PackageVersion Include="System.Text.Json" Version="6.0.10" />
     <PackageVersion Include="System.ValueTuple" Version="4.6.1" />
     <PackageVersion Include="TagLibSharp-Lidarr" Version="2.2.0.19" />
