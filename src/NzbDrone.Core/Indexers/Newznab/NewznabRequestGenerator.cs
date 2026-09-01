@@ -126,15 +126,14 @@ namespace NzbDrone.Core.Indexers.Newznab
 
         private IEnumerable<IndexerRequest> GetPagedRequests(int maxPages, IEnumerable<int> categories, string searchType, string parameters)
         {
-            if (categories.Empty())
-            {
-                yield break;
-            }
+            var categoryList = categories?.Distinct().ToList() ?? new List<int>();
 
-            var categoriesQuery = string.Join(",", categories.Distinct());
+            // no categories means search everything the indexer offers, which is the
+            // only way to reach indexers that don't map to a book category
+            var categoriesQuery = categoryList.Any() ? $"&cat={string.Join(",", categoryList)}" : string.Empty;
 
             var baseUrl =
-                $"{Settings.BaseUrl.TrimEnd('/')}{Settings.ApiPath.TrimEnd('/')}?t={searchType}&cat={categoriesQuery}&extended=1{Settings.AdditionalParameters}";
+                $"{Settings.BaseUrl.TrimEnd('/')}{Settings.ApiPath.TrimEnd('/')}?t={searchType}{categoriesQuery}&extended=1{Settings.AdditionalParameters}";
 
             if (Settings.ApiKey.IsNotNullOrWhiteSpace())
             {

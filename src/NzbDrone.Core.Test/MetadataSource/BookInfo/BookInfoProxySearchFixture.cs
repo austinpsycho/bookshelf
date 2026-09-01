@@ -27,8 +27,8 @@ namespace NzbDrone.Core.Test.MetadataSource.Goodreads
 
             var httpClient = Mocker.Resolve<IHttpClient>();
             Mocker.GetMock<ICachedHttpResponseService>()
-                .Setup(x => x.Get<List<SearchJsonResource>>(It.IsAny<HttpRequest>(), It.IsAny<bool>(), It.IsAny<TimeSpan>()))
-                .Returns((HttpRequest request, bool useCache, TimeSpan ttl) => httpClient.Get<List<SearchJsonResource>>(request));
+                .Setup(x => x.Get(It.IsAny<HttpRequest>(), It.IsAny<bool>(), It.IsAny<TimeSpan>()))
+                .Returns((HttpRequest request, bool useCache, TimeSpan ttl) => httpClient.Get(request));
 
             var metadataProfile = new MetadataProfile();
 

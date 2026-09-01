@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using LazyCache;
 using LazyCache.Providers;
@@ -30,6 +31,9 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             PropertyNameCaseInsensitive = false,
             Converters = { new STJUtcConverter() }
         };
+
+        private static readonly Regex IsbnRegex = new Regex(@"^(?:\d{9}[\dX]|\d{13})$", RegexOptions.Compiled);
+        private static readonly Regex AsinRegex = new Regex(@"^B[\dA-Z]{9}$", RegexOptions.Compiled);
 
         private readonly IHttpClient _httpClient;
         private readonly ICachedHttpResponseService _cachedHttpClient;
@@ -209,8 +213,32 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                         }
                     }
 
-                    // to handle isbn / asin
-                    q = slug;
+                    if (prefix == "isbn")
+                    {
+                        return SearchByIsbn(slug, getAllEditions);
+                    }
+
+                    if (prefix == "asin")
+                    {
+                        return SearchByAsin(slug, getAllEditions);
+                    }
+                }
+
+                // a bare identifier can be looked up directly, which works even when
+                // the metadata server's freetext search is unavailable
+                if (author == null)
+                {
+                    var identifier = title.Replace("-", string.Empty).Replace(" ", string.Empty).Trim().ToUpperInvariant();
+
+                    if (IsbnRegex.IsMatch(identifier))
+                    {
+                        return SearchByIsbn(identifier, getAllEditions);
+                    }
+
+                    if (AsinRegex.IsMatch(identifier))
+                    {
+                        return SearchByAsin(identifier, getAllEditions);
+                    }
                 }
 
                 return Search(q, getAllEditions);
@@ -220,7 +248,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 _logger.Warn(ex, ex.Message);
                 throw new GoodreadsException("Search for '{0}' failed. Unable to communicate with Goodreads.", ex, title);
             }
-            catch (Exception ex) when (ex is not BookInfoException)
+            catch (Exception ex) when (ex is not BookInfoException and not GoodreadsException)
             {
                 _logger.Warn(ex, ex.Message);
                 throw new GoodreadsException("Search for '{0}' failed. Invalid response received from Goodreads.", ex, title);
@@ -229,12 +257,83 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
         public List<Book> SearchByIsbn(string isbn)
         {
-            return Search(isbn, true);
+            return SearchByIsbn(isbn, true);
         }
 
         public List<Book> SearchByAsin(string asin)
         {
-            return Search(asin, true);
+            return SearchByAsin(asin, true);
+        }
+
+        private List<Book> SearchByIsbn(string isbn, bool getAllEditions)
+        {
+            return SearchByIdentifier("book/isbn", isbn, getAllEditions);
+        }
+
+        private List<Book> SearchByAsin(string asin, bool getAllEditions)
+        {
+            return SearchByIdentifier("book/asin", asin, getAllEditions);
+        }
+
+        private List<Book> SearchByIdentifier(string route, string identifier, bool getAllEditions)
+        {
+            var cleaned = identifier.Replace("-", string.Empty).Replace(" ", string.Empty).Trim().ToUpperInvariant();
+
+            var editionId = LookupEditionId(route, cleaned);
+
+            if (editionId.HasValue)
+            {
+                return SearchByGoodreadsBookId(editionId.Value, getAllEditions);
+            }
+
+            // the server only knows identifiers for editions it has already loaded,
+            // so fall back to a freetext search for the ones it hasn't
+            return Search(cleaned, getAllEditions);
+        }
+
+        private int? LookupEditionId(string route, string identifier)
+        {
+            HttpRequest httpRequest;
+            HttpResponse httpResponse;
+
+            while (true)
+            {
+                httpRequest = _requestBuilder.GetRequestBuilder().Create()
+                    .SetSegment("route", $"{route}/{identifier}")
+                    .Build();
+
+                httpRequest.SuppressHttpError = true;
+
+                // we expect a redirect to the edition
+                httpResponse = _httpClient.Get(httpRequest);
+
+                if (httpResponse.StatusCode == HttpStatusCode.TooManyRequests)
+                {
+                    WaitUntilRetry(httpResponse);
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            if (httpResponse.HasHttpRedirect)
+            {
+                var location = httpResponse.Headers.GetSingleValue("Location");
+
+                if (int.TryParse(location.Split('/').Last(), out var redirectId))
+                {
+                    return redirectId;
+                }
+            }
+            else if (httpResponse.StatusCode == HttpStatusCode.OK && int.TryParse(httpResponse.Content.Trim(), out var id))
+            {
+                return id;
+            }
+
+            _logger.Debug("No edition found for {0}/{1}, got {2}", route, identifier, httpResponse.StatusCode);
+
+            return null;
         }
 
         private List<Book> Search(string query, bool getAllEditions)
@@ -243,6 +342,11 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             try
             {
                 result = _goodreadsSearchProxy.Search(query);
+            }
+            catch (GoodreadsException e)
+            {
+                _logger.Warn(e, "Error searching for {0}", query);
+                throw;
             }
             catch (Exception e)
             {

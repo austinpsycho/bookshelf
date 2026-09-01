@@ -49,6 +49,20 @@ namespace NzbDrone.Core.Test.IndexerTests.NewznabTests
         }
 
         [Test]
+        public void should_search_all_categories_when_none_are_selected()
+        {
+            Subject.Settings.Categories = new int[] { };
+
+            var results = Subject.GetRecentRequests();
+
+            results.GetAllTiers().Should().HaveCount(1);
+
+            var page = results.GetAllTiers().First().First();
+
+            page.Url.Query.Should().NotContain("cat=");
+        }
+
+        [Test]
         [Ignore("Disabled since no usenet indexers seem to support it")]
         public void should_search_by_author_and_book_if_supported()
         {

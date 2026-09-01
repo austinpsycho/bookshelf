@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Threading;
 using NLog;
 using NzbDrone.Common.Http;
 using NzbDrone.Core.Http;
@@ -14,6 +15,10 @@ namespace NzbDrone.Core.MetadataSource.Goodreads
 
     public class GoodreadsSearchProxy : IGoodreadsSearchProxy
     {
+        private const int MaxRetries = 2;
+        private const int MaxBackoffSeconds = 5;
+        private const int DefaultBackoffSeconds = 5;
+
         private readonly ICachedHttpResponseService _cachedHttpClient;
         private readonly IMetadataRequestBuilder _metadataRequestBuilder;
         private readonly Logger _logger;
@@ -31,14 +36,41 @@ namespace NzbDrone.Core.MetadataSource.Goodreads
         {
             try
             {
-                var httpRequest = _metadataRequestBuilder.GetRequestBuilder().Create()
-                    .SetSegment("route", "search")
-                    .AddQueryParam("q", query)
-                    .Build();
+                for (var attempt = 0; ; attempt++)
+                {
+                    var httpRequest = _metadataRequestBuilder.GetRequestBuilder().Create()
+                        .SetSegment("route", "search")
+                        .AddQueryParam("q", query)
+                        .Build();
 
-                var response = _cachedHttpClient.Get<List<SearchJsonResource>>(httpRequest, false, TimeSpan.FromDays(5));
+                    // handle the backoff ourselves so a rate limited metadata server
+                    // doesn't look like a search that returned nothing
+                    httpRequest.SuppressHttpErrorStatusCodes = new[] { HttpStatusCode.TooManyRequests };
 
-                return response.Resource;
+                    var response = _cachedHttpClient.Get(httpRequest, false, TimeSpan.FromDays(5));
+
+                    if (response.StatusCode != HttpStatusCode.TooManyRequests)
+                    {
+                        return new HttpResponse<List<SearchJsonResource>>(response).Resource;
+                    }
+
+                    var backoff = GetRetryAfter(response);
+
+                    // a search is interactive, so don't sit on the request thread
+                    // waiting out a long cooldown
+                    if (attempt >= MaxRetries || backoff > MaxBackoffSeconds)
+                    {
+                        throw new GoodreadsException("Search for '{0}' failed. Metadata source is rate limited, try again in {1}s.", query, backoff);
+                    }
+
+                    _logger.Info("Metadata server returned 429, backing off for {0}s", backoff);
+
+                    Thread.Sleep(TimeSpan.FromSeconds(backoff));
+                }
+            }
+            catch (GoodreadsException)
+            {
+                throw;
             }
             catch (HttpException ex)
             {
@@ -55,6 +87,17 @@ namespace NzbDrone.Core.MetadataSource.Goodreads
                 _logger.Warn(ex);
                 throw new GoodreadsException("Search for '{0}' failed. Invalid response received from metadata source.", ex, query);
             }
+        }
+
+        private static int GetRetryAfter(HttpResponse response)
+        {
+            if (response.Headers.ContainsKey("Retry-After") &&
+                int.TryParse(response.Headers["Retry-After"], out var seconds))
+            {
+                return seconds;
+            }
+
+            return DefaultBackoffSeconds;
         }
     }
 }
