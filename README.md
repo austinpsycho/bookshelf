@@ -1,4 +1,7 @@
 # bookshelf
+Look, I just forked this because pennydreadful seems to have forgotten about it, and I wanted the current version of qBittorrent to work. Feel free to also use it if you want -- I stole the fix from a pull request there. 
+
+Now back to your regurlarly scheduled material:
 
 This is a revival of [Readarr](https://github.com/Readarr/Readarr). The images
 published are configured to use working Goodreads or Hardcover metadata out of
@@ -14,7 +17,7 @@ book you will need multiple instances.
 
 The container listens on port 8787 and expects a volume mounted at `/config`.
 
-    docker run -p 8787:8787 -v ~/.config/bookshelf:/config ghcr.io/pennydreadful/bookshelf:hardcover
+    docker run -p 8787:8787 -v ~/.config/bookshelf:/config ghcr.io/austinpsycho/bookshelf:hardcover
 
 The `softcover` tags use [Goodreads](https://www.goodreads.com) as the metadata
 provider. The quality of this metadata is generally poor and contains a lot of
