@@ -4,6 +4,12 @@
   width: 290px;
 }
 
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
 .name {
   @add-mixin truncate;
 

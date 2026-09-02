@@ -278,13 +278,22 @@ namespace NzbDrone.Core.Notifications
 
         public void Handle(BookFileDeletedEvent message)
         {
+            var edition = message.BookFile.Edition?.Value;
+
+            // the edition can already be gone when the file was only a stale db row
+            if (edition?.Book?.Value == null)
+            {
+                _logger.Debug("Skipping delete notification for {0}, its edition is no longer available", message.BookFile.Path);
+                return;
+            }
+
             var deleteMessage = new BookFileDeleteMessage();
 
-            var book = new List<Book> { message.BookFile.Edition.Value.Book };
+            var book = new List<Book> { edition.Book };
 
             deleteMessage.Message = GetMessage(message.BookFile.Author, book, message.BookFile.Quality);
             deleteMessage.BookFile = message.BookFile;
-            deleteMessage.Book = message.BookFile.Edition.Value.Book;
+            deleteMessage.Book = edition.Book;
             deleteMessage.Reason = message.Reason;
 
             foreach (var notification in _notificationFactory.OnBookFileDeleteEnabled())

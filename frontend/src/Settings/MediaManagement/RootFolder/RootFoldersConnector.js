@@ -2,6 +2,8 @@ import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { createSelector } from 'reselect';
+import * as commandNames from 'Commands/commandNames';
+import { executeCommand } from 'Store/Actions/commandActions';
 import { deleteRootFolder, fetchRootFolders } from 'Store/Actions/settingsActions';
 import RootFolders from './RootFolders';
 
@@ -22,7 +24,8 @@ function createMapStateToProps() {
 
 const mapDispatchToProps = {
   dispatchFetchRootFolders: fetchRootFolders,
-  dispatchDeleteRootFolder: deleteRootFolder
+  dispatchDeleteRootFolder: deleteRootFolder,
+  dispatchExecuteCommand: executeCommand
 };
 
 class RootFoldersConnector extends Component {
@@ -41,6 +44,15 @@ class RootFoldersConnector extends Component {
     this.props.dispatchDeleteRootFolder({ id });
   };
 
+  onScanRootFolder = (path) => {
+    this.props.dispatchExecuteCommand({
+      name: commandNames.RESCAN_FOLDERS,
+      folders: [path],
+      filter: 'known',
+      addNewAuthors: true
+    });
+  };
+
   //
   // Render
 
@@ -49,6 +61,7 @@ class RootFoldersConnector extends Component {
       <RootFolders
         {...this.props}
         onConfirmDeleteRootFolder={this.onConfirmDeleteRootFolder}
+        onScanRootFolder={this.onScanRootFolder}
       />
     );
   }
@@ -56,7 +69,8 @@ class RootFoldersConnector extends Component {
 
 RootFoldersConnector.propTypes = {
   dispatchFetchRootFolders: PropTypes.func.isRequired,
-  dispatchDeleteRootFolder: PropTypes.func.isRequired
+  dispatchDeleteRootFolder: PropTypes.func.isRequired,
+  dispatchExecuteCommand: PropTypes.func.isRequired
 };
 
 export default connect(createMapStateToProps, mapDispatchToProps)(RootFoldersConnector);

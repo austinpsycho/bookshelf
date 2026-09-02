@@ -2,8 +2,9 @@ import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import Card from 'Components/Card';
 import Label from 'Components/Label';
+import IconButton from 'Components/Link/IconButton';
 import ConfirmModal from 'Components/Modal/ConfirmModal';
-import { kinds } from 'Helpers/Props';
+import { icons, kinds } from 'Helpers/Props';
 import translate from 'Utilities/String/translate';
 import EditRootFolderModalConnector from './EditRootFolderModalConnector';
 import styles from './RootFolder.css';
@@ -18,7 +19,8 @@ class RootFolder extends Component {
 
     this.state = {
       isEditRootFolderModalOpen: false,
-      isDeleteRootFolderModalOpen: false
+      isDeleteRootFolderModalOpen: false,
+      isScanRootFolderModalOpen: false
     };
   }
 
@@ -48,6 +50,22 @@ class RootFolder extends Component {
     this.props.onConfirmDeleteRootFolder(this.props.id);
   };
 
+  onScanRootFolderPress = (event) => {
+    // the card itself opens the edit modal
+    event.stopPropagation();
+
+    this.setState({ isScanRootFolderModalOpen: true });
+  };
+
+  onScanRootFolderModalClose = () => {
+    this.setState({ isScanRootFolderModalOpen: false });
+  };
+
+  onConfirmScanRootFolder = () => {
+    this.setState({ isScanRootFolderModalOpen: false });
+    this.props.onScanRootFolder(this.props.path);
+  };
+
   //
   // Render
 
@@ -66,8 +84,17 @@ class RootFolder extends Component {
         overlayContent={true}
         onPress={this.onEditRootFolderPress}
       >
-        <div className={styles.name}>
-          {name}
+        <div className={styles.header}>
+          <div className={styles.name}>
+            {name}
+          </div>
+
+          <IconButton
+            title={translate('ScanRootFolder')}
+            name={icons.RESCAN}
+            size={18}
+            onPress={this.onScanRootFolderPress}
+          />
         </div>
 
         <div className={styles.enabled}>
@@ -100,6 +127,19 @@ class RootFolder extends Component {
           onConfirm={this.onConfirmDeleteRootFolder}
           onCancel={this.onDeleteRootFolderModalClose}
         />
+
+        <ConfirmModal
+          isOpen={this.state.isScanRootFolderModalOpen}
+          kind={kinds.WARNING}
+          title={translate('ScanRootFolder')}
+          message={translate('ScanRootFolderMessageText', {
+            path,
+            metadataProfile: metadataProfile?.name || translate('None')
+          })}
+          confirmLabel={translate('Scan')}
+          onConfirm={this.onConfirmScanRootFolder}
+          onCancel={this.onScanRootFolderModalClose}
+        />
       </Card>
     );
   }
@@ -111,7 +151,8 @@ RootFolder.propTypes = {
   path: PropTypes.string.isRequired,
   qualityProfile: PropTypes.object.isRequired,
   metadataProfile: PropTypes.object.isRequired,
-  onConfirmDeleteRootFolder: PropTypes.func.isRequired
+  onConfirmDeleteRootFolder: PropTypes.func.isRequired,
+  onScanRootFolder: PropTypes.func.isRequired
 };
 
 export default RootFolder;

@@ -44,6 +44,7 @@ class RootFolders extends Component {
       qualityProfiles,
       metadataProfiles,
       onConfirmDeleteRootFolder,
+      onScanRootFolder,
       ...otherProps
     } = this.props;
 
@@ -65,6 +66,7 @@ class RootFolders extends Component {
                     qualityProfile={qualityProfile}
                     metadataProfile={metadataProfile}
                     onConfirmDeleteRootFolder={onConfirmDeleteRootFolder}
+                    onScanRootFolder={onScanRootFolder}
                   />
                 );
               })
@@ -100,7 +102,8 @@ RootFolders.propTypes = {
   items: PropTypes.arrayOf(PropTypes.object).isRequired,
   qualityProfiles: PropTypes.arrayOf(PropTypes.object).isRequired,
   metadataProfiles: PropTypes.arrayOf(PropTypes.object).isRequired,
-  onConfirmDeleteRootFolder: PropTypes.func.isRequired
+  onConfirmDeleteRootFolder: PropTypes.func.isRequired,
+  onScanRootFolder: PropTypes.func.isRequired
 };
 
 export default RootFolders;

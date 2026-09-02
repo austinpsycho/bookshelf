@@ -17,7 +17,7 @@ ARG BUILD_DATE
 ARG METADATA_URL=https://api.bookinfo.pro
 ARG HARDCOVER
 
-LABEL maintainer="pennydreadful"
+LABEL maintainer="austinpsycho"
 
 ENV METADATA_URL=${METADATA_URL}
 ENV HARDCOVER=${HARDCOVER}
@@ -35,7 +35,7 @@ RUN --mount=type=bind,source=_output,target=_output \
     esac; \
     cp -r /_output/UI /app/readarr/bin/UI
 
-RUN echo -e "UpdateMethod=docker\nBranch=${GIT_BRANCH}\nPackageVersion=${COMMIT_HASH}}\nPackageAuthor=pennydreadful" > /app/readarr/package_info && \
+RUN echo -e "UpdateMethod=docker\nBranch=${GIT_BRANCH}\nPackageVersion=${COMMIT_HASH}}\nPackageAuthor=austinpsycho" > /app/readarr/package_info && \
     printf "version: ${COMMIT_HASH}}\nBuild-date: ${BUILD_DATE}" > /build_version
 
 # copy local files

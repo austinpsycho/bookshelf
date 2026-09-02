@@ -144,7 +144,19 @@ namespace NzbDrone.Core.MediaFiles.BookImport.Identification
                 candidateReleases = _candidateService.GetRemoteCandidates(localBookRelease, idOverrides);
                 if (!config.AddNewAuthors)
                 {
-                    candidateReleases = candidateReleases.Where(x => x.Edition.Book.Value.Id > 0 && x.Edition.Book.Value.AuthorId > 0);
+                    var remoteCandidates = candidateReleases.ToList();
+                    var knownCandidates = remoteCandidates.Where(x => x.Edition.Book.Value.Id > 0 && x.Edition.Book.Value.AuthorId > 0).ToList();
+
+                    // otherwise these files are silently dropped and look like a failure to identify
+                    if (remoteCandidates.Count > knownCandidates.Count)
+                    {
+                        _logger.Warn("Discarded {0} of {1} candidates for {2} because the author is not in the library. Add the author, or rescan with 'add new authors' enabled.",
+                            remoteCandidates.Count - knownCandidates.Count,
+                            remoteCandidates.Count,
+                            localBookRelease);
+                    }
+
+                    candidateReleases = knownCandidates;
                 }
 
                 usedRemote = true;
