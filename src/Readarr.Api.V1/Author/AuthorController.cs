@@ -38,6 +38,7 @@ namespace Readarr.Api.V1.Author
         private readonly IAuthorService _authorService;
         private readonly IBookService _bookService;
         private readonly IAddAuthorService _addAuthorService;
+        private readonly IResetAuthorService _resetAuthorService;
         private readonly IAuthorStatisticsService _authorStatisticsService;
         private readonly IMapCoversToLocal _coverMapper;
         private readonly IManageCommandQueue _commandQueueManager;
@@ -47,6 +48,7 @@ namespace Readarr.Api.V1.Author
                             IAuthorService authorService,
                             IBookService bookService,
                             IAddAuthorService addAuthorService,
+                            IResetAuthorService resetAuthorService,
                             IAuthorStatisticsService authorStatisticsService,
                             IMapCoversToLocal coverMapper,
                             IManageCommandQueue commandQueueManager,
@@ -66,6 +68,7 @@ namespace Readarr.Api.V1.Author
             _authorService = authorService;
             _bookService = bookService;
             _addAuthorService = addAuthorService;
+            _resetAuthorService = resetAuthorService;
             _authorStatisticsService = authorStatisticsService;
 
             _coverMapper = coverMapper;
@@ -143,6 +146,22 @@ namespace Readarr.Api.V1.Author
             var author = _addAuthorService.AddAuthor(authorResource.ToModel());
 
             return Created(author.Id);
+        }
+
+        /// <summary>
+        /// Rebuilds an author from the metadata source, keeping their files.
+        /// </summary>
+        /// <remarks>
+        /// The replacement ID comes from the caller. Resolving it here by name
+        /// would risk rebuilding an author as a different person who happens to
+        /// share their name.
+        /// </remarks>
+        [HttpPost("{id:int}/reset")]
+        public ActionResult<AuthorResource> ResetAuthor(int id, [FromBody] ResetAuthorResource resource)
+        {
+            var author = _resetAuthorService.ResetAuthor(id, resource?.ForeignAuthorId);
+
+            return Accepted(author.ToResource());
         }
 
         [RestPutById]

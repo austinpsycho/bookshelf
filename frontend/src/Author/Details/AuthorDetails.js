@@ -5,6 +5,7 @@ import DeleteAuthorModal from 'Author/Delete/DeleteAuthorModal';
 import EditAuthorModalConnector from 'Author/Edit/EditAuthorModalConnector';
 import AuthorHistoryTable from 'Author/History/AuthorHistoryTable';
 import MonitoringOptionsModal from 'Author/MonitoringOptions/MonitoringOptionsModal';
+import ResetAuthorModal from 'Author/Reset/ResetAuthorModal';
 import BookEditorFooter from 'Book/Editor/BookEditorFooter';
 import BookFileEditorTable from 'BookFile/Editor/BookFileEditorTable';
 import Alert from 'Components/Alert';
@@ -54,6 +55,7 @@ class AuthorDetails extends Component {
       isRetagModalOpen: false,
       isEditAuthorModalOpen: false,
       isDeleteAuthorModalOpen: false,
+      isResetAuthorModalOpen: false,
       isInteractiveImportModalOpen: false,
       isMonitorOptionsModalOpen: false,
       isEditorActive: false,
@@ -146,6 +148,14 @@ class AuthorDetails extends Component {
       isEditAuthorModalOpen: false,
       isDeleteAuthorModalOpen: true
     });
+  };
+
+  onResetAuthorPress = () => {
+    this.setState({ isResetAuthorModalOpen: true });
+  };
+
+  onResetAuthorModalClose = () => {
+    this.setState({ isResetAuthorModalOpen: false });
   };
 
   onDeleteAuthorModalClose = () => {
@@ -253,6 +263,7 @@ class AuthorDetails extends Component {
       isRetagModalOpen,
       isEditAuthorModalOpen,
       isDeleteAuthorModalOpen,
+      isResetAuthorModalOpen,
       isInteractiveImportModalOpen,
       isMonitorOptionsModalOpen,
       isEditorActive,
@@ -330,6 +341,12 @@ class AuthorDetails extends Component {
               label={translate('Edit')}
               iconName={icons.EDIT}
               onPress={this.onEditAuthorPress}
+            />
+
+            <PageToolbarButton
+              label="Reset"
+              iconName={icons.RESTORE}
+              onPress={this.onResetAuthorPress}
             />
 
             <PageToolbarButton
@@ -571,6 +588,13 @@ class AuthorDetails extends Component {
             isOpen={isDeleteAuthorModalOpen}
             authorId={id}
             onModalClose={this.onDeleteAuthorModalClose}
+          />
+
+          <ResetAuthorModal
+            isOpen={isResetAuthorModalOpen}
+            authorId={id}
+            authorName={authorName}
+            onModalClose={this.onResetAuthorModalClose}
           />
 
           <InteractiveImportModal

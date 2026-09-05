@@ -1,0 +1,36 @@
+.searchRow {
+  display: flex;
+  margin-bottom: 10px;
+}
+
+.searchButton {
+  margin-left: 10px;
+}
+
+.results {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.candidate,
+.selected {
+  padding: 8px;
+  border-bottom: 1px solid var(--borderColor);
+  cursor: pointer;
+}
+
+.selected {
+  composes: candidate;
+
+  border-left: 4px solid var(--themeLightColor);
+  background-color: var(--tableRowHoverBackgroundColor);
+}
+
+.candidateName {
+  font-weight: bold;
+}
+
+.candidateId {
+  color: var(--disabledColor);
+  font-size: 11px;
+}
