@@ -36,6 +36,17 @@ namespace NzbDrone.Core.MediaFiles
         public string ImageFile { get; set; }
         public long ImageSize { get; set; }
 
+        /// <summary>
+        /// Audible's identifier for the title, when the file carries one.
+        /// </summary>
+        /// <remarks>
+        /// Identification short-circuits on a known ASIN instead of falling
+        /// back to a title search, which is the difference between two upstream
+        /// requests for a file and a couple of dozen. It's also scored as an
+        /// exact match, so it beats fuzzy title comparison.
+        /// </remarks>
+        public string Asin { get; set; }
+
         public bool IsValid { get; private set; }
         public QualityModel Quality { get; set; }
         public MediaInfoModel MediaInfo { get; set; }
@@ -103,6 +114,7 @@ namespace NzbDrone.Core.MediaFiles
                 {
                     var id3tag = (TagLib.Id3v2.Tag)file.GetTag(TagTypes.Id3v2);
                     Media = id3tag.GetTextAsString("TMED");
+                    Asin = ReadId3UserText(id3tag, "ASIN");
                     Date = ReadId3Date(id3tag, "TDRC");
                     OriginalReleaseDate = ReadId3Date(id3tag, "TDOR");
                 }
@@ -112,6 +124,7 @@ namespace NzbDrone.Core.MediaFiles
                     // https://picard.musicbrainz.org/docs/mappings/
                     var flactag = (TagLib.Ogg.XiphComment)file.GetTag(TagLib.TagTypes.Xiph);
                     Media = flactag.GetField("MEDIA").ExclusiveOrDefault();
+                    Asin = flactag.GetField("ASIN").ExclusiveOrDefault();
                     Date = DateTime.TryParse(flactag.GetField("DATE").ExclusiveOrDefault(), out tempDate) ? tempDate : default(DateTime?);
                     OriginalReleaseDate = DateTime.TryParse(flactag.GetField("ORIGINALDATE").ExclusiveOrDefault(), out tempDate) ? tempDate : default(DateTime?);
                     Publisher = flactag.GetField("LABEL").ExclusiveOrDefault();
@@ -120,6 +133,7 @@ namespace NzbDrone.Core.MediaFiles
                 {
                     var apetag = (TagLib.Ape.Tag)file.GetTag(TagTypes.Ape);
                     Media = apetag.GetItem("Media")?.ToString();
+                    Asin = apetag.GetItem("ASIN")?.ToString();
                     Date = DateTime.TryParse(apetag.GetItem("Year")?.ToString(), out tempDate) ? tempDate : default(DateTime?);
                     OriginalReleaseDate = DateTime.TryParse(apetag.GetItem("Original Date")?.ToString(), out tempDate) ? tempDate : default(DateTime?);
                     Publisher = apetag.GetItem("Label")?.ToString();
@@ -128,6 +142,7 @@ namespace NzbDrone.Core.MediaFiles
                 {
                     var asftag = (TagLib.Asf.Tag)file.GetTag(TagTypes.Asf);
                     Media = asftag.GetDescriptorString("WM/Media");
+                    Asin = asftag.GetDescriptorString("ASIN");
                     Date = DateTime.TryParse(asftag.GetDescriptorString("WM/Year"), out tempDate) ? tempDate : default(DateTime?);
                     OriginalReleaseDate = DateTime.TryParse(asftag.GetDescriptorString("WM/OriginalReleaseTime"), out tempDate) ? tempDate : default(DateTime?);
                     Publisher = asftag.GetDescriptorString("WM/Publisher");
@@ -136,6 +151,13 @@ namespace NzbDrone.Core.MediaFiles
                 {
                     var appletag = (TagLib.Mpeg4.AppleTag)file.GetTag(TagTypes.Apple);
                     Media = appletag.GetDashBox("com.apple.iTunes", "MEDIA");
+
+                    // Audiobookshelf and most Audible-derived m4b files write
+                    // the ASIN as a freeform atom. Some taggers use a plain
+                    // "asin" atom instead.
+                    Asin = appletag.GetDashBox("com.apple.iTunes", "ASIN")
+                        ?? appletag.GetDashBox("com.apple.iTunes", "asin")
+                        ?? appletag.DataBoxes(FixAppleId("asin")).FirstOrDefault()?.Text;
                     Date = DateTime.TryParse(appletag.DataBoxes(FixAppleId("day")).FirstOrDefault()?.Text, out tempDate) ? tempDate : default(DateTime?);
                     OriginalReleaseDate = DateTime.TryParse(appletag.GetDashBox("com.apple.iTunes", "Original Date"), out tempDate) ? tempDate : default(DateTime?);
                 }
@@ -513,6 +535,17 @@ namespace NzbDrone.Core.MediaFiles
             return output;
         }
 
+        /// <summary>
+        /// Reads a user-defined text frame (TXXX), which is where identifiers
+        /// like the ASIN live in ID3.
+        /// </summary>
+        private static string ReadId3UserText(TagLib.Id3v2.Tag tag, string description)
+        {
+            var frame = UserTextInformationFrame.Get(tag, description, false);
+
+            return frame?.Text?.FirstOrDefault();
+        }
+
         public static implicit operator ParsedTrackInfo(AudioTag tag)
         {
             if (!tag.IsValid)
@@ -543,7 +576,8 @@ namespace NzbDrone.Core.MediaFiles
                 CleanTitle = tag.Title?.CleanTrackTitle(),
                 Duration = tag.Duration,
                 Quality = tag.Quality,
-                MediaInfo = tag.MediaInfo
+                MediaInfo = tag.MediaInfo,
+                Asin = tag.Asin
             };
         }
     }
