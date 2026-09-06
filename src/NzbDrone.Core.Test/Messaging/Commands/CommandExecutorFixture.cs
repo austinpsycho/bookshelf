@@ -45,9 +45,14 @@ namespace NzbDrone.Core.Test.Messaging.Commands
         {
             _commandQueue = new CommandQueue();
 
+            // The method group picks the parameterless overload, which consumes
+            // with CancellationToken.None -- so the executor's token is discarded,
+            // its cancel never registers PulseAllConsumers, and the worker threads
+            // stay blocked in Monitor.Wait for good. They are foreground threads,
+            // so the test host then cannot exit once the run finishes.
             Mocker.GetMock<IManageCommandQueue>()
                   .Setup(s => s.Queue(It.IsAny<CancellationToken>()))
-                  .Returns(_commandQueue.GetConsumingEnumerable);
+                  .Returns((CancellationToken token) => _commandQueue.GetConsumingEnumerable(token));
         }
 
         private void QueueAndWaitForExecution(CommandModel commandModel, bool waitPublish = false)
