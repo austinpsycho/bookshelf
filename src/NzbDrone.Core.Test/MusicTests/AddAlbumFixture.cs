@@ -182,6 +182,43 @@ namespace NzbDrone.Core.Test.MusicTests
         }
 
         [Test]
+        public void should_ask_for_the_search_when_the_book_already_existed()
+        {
+            // The usual route to a search needs the refresh to report changed
+            // metadata so a rescan runs. A book already in the library changes
+            // nothing, so that chain never reaches the request on the row.
+            var newBook = BookToAdd("edition", "book", "author");
+            newBook.AddOptions = new AddBookOptions { SearchForNewBook = true };
+
+            GivenValidBook("book", "edition");
+            GivenValidPath();
+
+            Mocker.GetMock<IBookService>()
+                .Setup(s => s.FindById(It.IsAny<string>()))
+                .Returns(new Book { Id = 3624 });
+
+            Subject.AddBook(newBook);
+
+            Mocker.GetMock<IBookAddedService>()
+                .Verify(v => v.SearchForRecentlyAdded(It.IsAny<int>()), Times.Once());
+        }
+
+        [Test]
+        public void should_leave_a_new_book_to_the_usual_search_path()
+        {
+            var newBook = BookToAdd("edition", "book", "author");
+            newBook.AddOptions = new AddBookOptions { SearchForNewBook = true };
+
+            GivenValidBook("book", "edition");
+            GivenValidPath();
+
+            Subject.AddBook(newBook);
+
+            Mocker.GetMock<IBookAddedService>()
+                .Verify(v => v.SearchForRecentlyAdded(It.IsAny<int>()), Times.Never());
+        }
+
+        [Test]
         public void should_throw_if_book_cannot_be_found()
         {
             var newBook = BookToAdd("edition", "book", "author");

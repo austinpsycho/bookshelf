@@ -21,6 +21,7 @@ namespace NzbDrone.Core.Books
         private readonly IAuthorService _authorService;
         private readonly IAddAuthorService _addAuthorService;
         private readonly IBookService _bookService;
+        private readonly IBookAddedService _bookAddedService;
         private readonly IProvideBookInfo _bookInfo;
         private readonly IImportListExclusionService _importListExclusionService;
         private readonly Logger _logger;
@@ -28,6 +29,7 @@ namespace NzbDrone.Core.Books
         public AddBookService(IAuthorService authorService,
                                IAddAuthorService addAuthorService,
                                IBookService bookService,
+                               IBookAddedService bookAddedService,
                                IProvideBookInfo bookInfo,
                                IImportListExclusionService importListExclusionService,
                                Logger logger)
@@ -35,6 +37,7 @@ namespace NzbDrone.Core.Books
             _authorService = authorService;
             _addAuthorService = addAuthorService;
             _bookService = bookService;
+            _bookAddedService = bookAddedService;
             _bookInfo = bookInfo;
             _importListExclusionService = importListExclusionService;
             _logger = logger;
@@ -106,6 +109,18 @@ namespace NzbDrone.Core.Books
             book.Author = dbAuthor;
             book.AuthorMetadataId = dbAuthor.AuthorMetadataId;
             _bookService.AddBook(book, doRefresh);
+
+            // Normally the search is reached the long way round: the refresh this
+            // add queues finds changed metadata, that triggers a rescan, and the
+            // scan handler picks the request up off the row. A book the library
+            // already had changes nothing, so the refresh reports no update, the
+            // rescan is skipped, and the request sits on the row unread. Ask
+            // directly instead of relying on a chain that only fires for books the
+            // refresh considers new.
+            if (dbBook != null && book.AddOptions != null && book.AddOptions.SearchForNewBook)
+            {
+                _bookAddedService.SearchForRecentlyAdded(dbAuthor.Id);
+            }
 
             return book;
         }
