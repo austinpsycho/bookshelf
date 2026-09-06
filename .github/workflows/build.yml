@@ -93,6 +93,11 @@ jobs:
       - name: Test
         shell: bash
         run: ./test.sh Linux Unit Test
+        env:
+          # The suite logs at trace level -- roughly 28 lines per test, so
+          # tens of thousands of lines streamed into the Actions log. Send it
+          # to a file instead; failures still report through TestResult.xml.
+          READARR_TESTS_LOG_OUTPUT: File
 
       - name: Report test results
         uses: dorny/test-reporter@v2
