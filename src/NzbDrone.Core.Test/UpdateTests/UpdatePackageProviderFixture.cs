@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using FluentAssertions;
 using NUnit.Framework;
@@ -6,9 +6,14 @@ using NzbDrone.Common.EnvironmentInfo;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Test.Framework;
 using NzbDrone.Core.Update;
+using NzbDrone.Test.Common.Categories;
 
 namespace NzbDrone.Core.Test.UpdateTests
 {
+    // Every test here calls UseRealHttp and asks the update server for real
+    // releases, so a unit run fails or hangs on connect whenever that service is
+    // unavailable -- which for a fork it generally is.
+    [IntegrationTest]
     public class UpdatePackageProviderFixture : CoreTest<UpdatePackageProvider>
     {
         [SetUp]
