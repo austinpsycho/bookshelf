@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -26,6 +26,12 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 {
     public class BookInfoProxy : IProvideAuthorInfo, IProvideBookInfo, ISearchForNewBook, ISearchForNewAuthor, ISearchForNewEntity
     {
+        // Mirrors GoodreadsSearchProxy: a cooldown longer than this is reported
+        // rather than waited out, so a rate limited source fails visibly instead
+        // of holding a thread.
+        private const int MaxRetries = 3;
+        private const int MaxBackoffSeconds = 30;
+
         private static readonly JsonSerializerOptions SerializerSettings = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = false,
@@ -296,7 +302,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             HttpRequest httpRequest;
             HttpResponse httpResponse;
 
-            while (true)
+            for (var attempt = 0; ; attempt++)
             {
                 httpRequest = _requestBuilder.GetRequestBuilder().Create()
                     .SetSegment("route", $"{route}/{identifier}")
@@ -309,7 +315,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
                 if (httpResponse.StatusCode == HttpStatusCode.TooManyRequests)
                 {
-                    WaitUntilRetry(httpResponse);
+                    WaitUntilRetry(httpResponse, attempt);
                 }
                 else
                 {
@@ -491,7 +497,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             HttpRequest httpRequest;
             HttpResponse httpResponse;
 
-            while (true)
+            for (var attempt = 0; ; attempt++)
             {
                 httpRequest = _requestBuilder.GetRequestBuilder().Create()
                     .SetSegment("route", $"book/{id}")
@@ -504,7 +510,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
                 if (httpResponse.StatusCode == HttpStatusCode.TooManyRequests)
                 {
-                    WaitUntilRetry(httpResponse);
+                    WaitUntilRetry(httpResponse, attempt);
                 }
                 else
                 {
@@ -581,7 +587,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
         {
             HttpResponse<BulkBookResource> httpResponse;
 
-            while (true)
+            for (var attempt = 0; ; attempt++)
             {
                 var httpRequest = _requestBuilder.GetRequestBuilder().Create()
                     .SetSegment("route", "book/bulk")
@@ -598,7 +604,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
                 if (httpResponse.StatusCode == HttpStatusCode.TooManyRequests)
                 {
-                    WaitUntilRetry(httpResponse);
+                    WaitUntilRetry(httpResponse, attempt);
                 }
                 else
                 {
@@ -719,7 +725,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 {
                     if (httpResponse.StatusCode == HttpStatusCode.TooManyRequests)
                     {
-                        WaitUntilRetry(httpResponse);
+                        WaitUntilRetry(httpResponse, i);
                         continue;
                     }
                     else if (httpResponse.StatusCode == HttpStatusCode.NotFound)
@@ -773,7 +779,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
                 if (httpResponse.StatusCode == HttpStatusCode.TooManyRequests)
                 {
-                    WaitUntilRetry(httpResponse);
+                    WaitUntilRetry(httpResponse, i);
                     continue;
                 }
 
@@ -846,7 +852,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             return Tuple.Create(authorId, book, metadata);
         }
 
-        private void WaitUntilRetry(HttpResponse response)
+        private void WaitUntilRetry(HttpResponse response, int attempt)
         {
             var seconds = 5;
 
@@ -858,6 +864,15 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 {
                     seconds = 5;
                 }
+            }
+
+            // Retrying whatever cooldown the server names, for as many rounds as
+            // the caller's loop allows, is not a retry policy -- it is an
+            // open-ended block on the calling thread. A hundred second
+            // Retry-After against a sixty iteration loop is a hundred minutes.
+            if (attempt >= MaxRetries || seconds > MaxBackoffSeconds)
+            {
+                throw new BookInfoException("Metadata source is rate limited, try again in {0}s.", seconds);
             }
 
             _logger.Info("BookInfo returned 429, backing off for {0}s", seconds);
