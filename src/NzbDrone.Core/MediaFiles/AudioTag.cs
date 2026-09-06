@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -357,6 +357,7 @@ namespace NzbDrone.Core.MediaFiles
                 {
                     var id3tag = (TagLib.Id3v2.Tag)file.GetTag(TagTypes.Id3v2);
                     id3tag.SetTextFrame("TMED", Media);
+                    WriteId3Tag(id3tag, "ASIN", Asin);
                     WriteId3Date(id3tag, "TDRC", "TYER", "TDAT", Date);
                     WriteId3Date(id3tag, "TDOR", "TORY", null, OriginalReleaseDate);
                 }
@@ -380,6 +381,7 @@ namespace NzbDrone.Core.MediaFiles
                     flactag.SetField("TOTALDISCS", DiscCount);
                     flactag.SetField("MEDIA", Media);
                     flactag.SetField("LABEL", Publisher);
+                    flactag.SetField("ASIN", Asin);
                 }
                 else if (file.TagTypes.HasFlag(TagTypes.Ape))
                 {
@@ -390,6 +392,7 @@ namespace NzbDrone.Core.MediaFiles
                     apetag.SetValue("Original Year", OriginalReleaseDate.HasValue ? OriginalReleaseDate.Value.Year.ToString() : null);
                     apetag.SetValue("Media", Media);
                     apetag.SetValue("Label", Publisher);
+                    apetag.SetValue("ASIN", Asin);
                 }
                 else if (file.TagTypes.HasFlag(TagTypes.Asf))
                 {
@@ -400,6 +403,7 @@ namespace NzbDrone.Core.MediaFiles
                     asftag.SetDescriptorString(OriginalReleaseDate.HasValue ? OriginalReleaseDate.Value.Year.ToString() : null, "WM/OriginalReleaseYear");
                     asftag.SetDescriptorString(Media, "WM/Media");
                     asftag.SetDescriptorString(Publisher, "WM/Publisher");
+                    asftag.SetDescriptorString(Asin, "ASIN");
                 }
                 else if (file.TagTypes.HasFlag(TagTypes.Apple))
                 {
@@ -409,6 +413,7 @@ namespace NzbDrone.Core.MediaFiles
                     appletag.SetDashBox("com.apple.iTunes", "Original Date", OriginalReleaseDate.HasValue ? OriginalReleaseDate.Value.ToString("yyyy-MM-dd") : null);
                     appletag.SetDashBox("com.apple.iTunes", "Original Year", OriginalReleaseDate.HasValue ? OriginalReleaseDate.Value.Year.ToString() : null);
                     appletag.SetDashBox("com.apple.iTunes", "MEDIA", Media);
+                    appletag.SetDashBox("com.apple.iTunes", "ASIN", Asin);
                 }
 
                 file.Save();
