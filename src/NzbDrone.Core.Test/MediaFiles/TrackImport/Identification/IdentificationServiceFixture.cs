@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -23,10 +23,18 @@ using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Profiles.Metadata;
 using NzbDrone.Core.Test.Framework;
 using NzbDrone.Test.Common;
+using NzbDrone.Test.Common.Categories;
 
 namespace NzbDrone.Core.Test.MediaFiles.BookImport.Identification
 {
     [TestFixture]
+
+    // The cases below are marked Explicit because they are slow: each one runs a
+    // full identification against the live metadata service. Explicit alone does
+    // not keep them out of CI -- the adapter runs explicit tests whenever a filter
+    // is applied, and CI always applies one -- so categorise them the same way as
+    // the other fixtures that talk to the network.
+    [IntegrationTest]
     public class IdentificationServiceFixture : DbTest
     {
         private AuthorService _authorService;
