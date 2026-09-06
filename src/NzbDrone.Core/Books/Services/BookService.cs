@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using NLog;
@@ -72,6 +72,29 @@ namespace NzbDrone.Core.Books
 
             var editions = newBook.Editions.Value;
             editions.ForEach(x => x.BookId = newBook.Id);
+
+            // Adding a book the library already has -- an import list or an
+            // external client re-requesting it -- arrives with editions built
+            // from the metadata response, so their Ids are 0 even where the rows
+            // already exist. Inserting those again violates the unique foreign
+            // edition ID and the caller gets a constraint error rather than an
+            // answer. Adopt the rows that are already there instead.
+            var foreignEditionIds = editions.Select(x => x.ForeignEditionId).ToList();
+
+            var known = _editionService.GetEditionsForRefresh(newBook.Id, foreignEditionIds)
+                .Where(x => x.ForeignEditionId.IsNotNullOrWhiteSpace())
+                .GroupBy(x => x.ForeignEditionId)
+                .ToDictionary(x => x.Key, x => x.First().Id);
+
+            foreach (var edition in editions)
+            {
+                if (edition.Id == 0 &&
+                    edition.ForeignEditionId.IsNotNullOrWhiteSpace() &&
+                    known.TryGetValue(edition.ForeignEditionId, out var existingId))
+                {
+                    edition.Id = existingId;
+                }
+            }
 
             _editionService.InsertMany(editions.Where(x => x.Id == 0).ToList());
             _editionService.SetMonitored(editions.FirstOrDefault(x => x.Monitored) ?? editions.First());

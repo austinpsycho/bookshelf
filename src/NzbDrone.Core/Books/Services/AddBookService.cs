@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FluentValidation;
@@ -50,7 +50,15 @@ namespace NzbDrone.Core.Books
             var dbBook = _bookService.FindById(book.ForeignBookId);
             if (dbBook != null)
             {
+                // Asking to add a book that is already there is asking for it to
+                // be tracked, not for the request to be dropped -- the row can
+                // already exist unmonitored, pulled in by an author refresh or a
+                // library scan. UseDbFieldsFrom adopts the stored monitoring
+                // state, so put the caller's choice back over it.
+                var monitored = book.Monitored;
+
                 book.UseDbFieldsFrom(dbBook);
+                book.Monitored = monitored;
             }
 
             // Remove any import list exclusions preventing addition

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FizzWare.NBuilder;
 using FluentAssertions;
@@ -91,6 +91,30 @@ namespace NzbDrone.Core.Test.MusicTests
             var book = Subject.AddBook(newBook);
 
             book.Title.Should().Be(_fakeBook.Title);
+        }
+
+        [Test]
+        public void should_monitor_a_book_the_library_already_has_unmonitored()
+        {
+            // A book can already be in the library without being tracked --
+            // pulled in by an author refresh or a library scan. Adding it is a
+            // request to start tracking it, and copying the stored fields back
+            // over the request left it exactly as unmonitored as before, so the
+            // caller kept asking.
+            var newBook = BookToAdd("edition", "book", "author");
+            newBook.Monitored = true;
+
+            GivenValidBook("book", "edition");
+            GivenValidPath();
+
+            Mocker.GetMock<IBookService>()
+                .Setup(s => s.FindById(It.IsAny<string>()))
+                .Returns(new Book { Id = 3624, Monitored = false });
+
+            Subject.AddBook(newBook);
+
+            Mocker.GetMock<IBookService>()
+                .Verify(v => v.AddBook(It.Is<Book>(b => b.Id == 3624 && b.Monitored), It.IsAny<bool>()), Times.Once());
         }
 
         [Test]
