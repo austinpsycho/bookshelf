@@ -97,7 +97,7 @@ jobs:
           # Name the test that is running when the assembly stops making
           # progress, instead of leaving a log that just stops. Writes a
           # Sequence.xml naming it, uploaded below.
-          EXTRA_TEST_PARAMS: "--blame-hang --blame-hang-timeout 300s"
+          EXTRA_TEST_PARAMS: "--blame-hang --blame-hang-timeout 120s --blame-hang-dump-type none"
           # NLog writes every trace line synchronously to stdout, which in CI is a
           # pipe into vstest. When that pipe fills and stops being drained the
           # write blocks and the run stops dead at an arbitrary line. Log to a
