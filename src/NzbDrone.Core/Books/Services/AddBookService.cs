@@ -56,9 +56,20 @@ namespace NzbDrone.Core.Books
                 // library scan. UseDbFieldsFrom adopts the stored monitoring
                 // state, so put the caller's choice back over it.
                 var monitored = book.Monitored;
+                var requestedOptions = book.AddOptions;
 
                 book.UseDbFieldsFrom(dbBook);
                 book.Monitored = monitored;
+
+                // AddOptions carries SearchForNewBook, and it is the stored copy that
+                // decides what gets searched: BookAddedService reads it back off the row
+                // after the refresh. Adopting the existing row's options threw the
+                // request to search away with them, so the book was monitored and then
+                // quietly never looked for.
+                if (requestedOptions != null)
+                {
+                    book.AddOptions = requestedOptions;
+                }
             }
 
             // Remove any import list exclusions preventing addition

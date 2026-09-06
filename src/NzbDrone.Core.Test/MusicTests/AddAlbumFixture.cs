@@ -118,6 +118,28 @@ namespace NzbDrone.Core.Test.MusicTests
         }
 
         [Test]
+        public void should_keep_the_requested_search_option_for_an_existing_book()
+        {
+            // SearchForNewBook is read back off the stored row after the refresh, so
+            // adopting the existing row's AddOptions meant an explicit add was
+            // monitored and then never searched for.
+            var newBook = BookToAdd("edition", "book", "author");
+            newBook.AddOptions = new AddBookOptions { SearchForNewBook = true };
+
+            GivenValidBook("book", "edition");
+            GivenValidPath();
+
+            Mocker.GetMock<IBookService>()
+                .Setup(s => s.FindById(It.IsAny<string>()))
+                .Returns(new Book { Id = 3624, AddOptions = new AddBookOptions { SearchForNewBook = false } });
+
+            Subject.AddBook(newBook);
+
+            Mocker.GetMock<IBookService>()
+                .Verify(v => v.AddBook(It.Is<Book>(b => b.AddOptions.SearchForNewBook), It.IsAny<bool>()), Times.Once());
+        }
+
+        [Test]
         public void should_throw_if_book_cannot_be_found()
         {
             var newBook = BookToAdd("edition", "book", "author");
