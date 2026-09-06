@@ -93,6 +93,21 @@ jobs:
       - name: Test
         shell: bash
         run: ./test.sh Linux Unit Test
+        env:
+          # Name the test that is running when the assembly stops making
+          # progress, instead of leaving a log that just stops. Writes a
+          # Sequence.xml naming it, uploaded below.
+          EXTRA_TEST_PARAMS: "--blame-hang --blame-hang-timeout 300s"
+
+      - name: Upload hang diagnostics
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-diagnostics
+          path: |
+            **/*Sequence.xml
+            **/TestResult.xml
+          if-no-files-found: ignore
 
       - name: Report test results
         uses: dorny/test-reporter@v2

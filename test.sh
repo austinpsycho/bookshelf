@@ -60,7 +60,8 @@ for i in "${FILES[@]}";
   do ASSEMBLIES="$ASSEMBLIES $TEST_DIR/$i"
 done
 
-DOTNET_PARAMS="$ASSEMBLIES --filter:$WHERE $VSTEST_PARAMS"
+# Extra vstest arguments, for CI to pass things like --blame-hang.
+DOTNET_PARAMS="$ASSEMBLIES --filter:$WHERE $VSTEST_PARAMS $EXTRA_TEST_PARAMS"
 
 if [ "$COVERAGE" = "Coverage" ]; then
   dotnet test $DOTNET_PARAMS --settings:"src/coverlet.runsettings" --results-directory:./CoverageResults
