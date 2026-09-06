@@ -91,6 +91,18 @@ namespace NzbDrone.Core.Books
                 dbAuthor = _addAuthorService.AddAuthor(author, false);
             }
 
+            // Wanted lists a book only when its author is monitored too, and an
+            // author picked up by a refresh or a library scan is not. Adding a book
+            // to be monitored, against an author nobody chose to follow, otherwise
+            // leaves it monitored and invisible -- never searched, never listed.
+            if (book.Monitored && !dbAuthor.Monitored)
+            {
+                _logger.Debug("Monitoring {0} so {1} can be searched for", dbAuthor, book);
+
+                dbAuthor.Monitored = true;
+                _authorService.UpdateAuthor(dbAuthor);
+            }
+
             book.Author = dbAuthor;
             book.AuthorMetadataId = dbAuthor.AuthorMetadataId;
             _bookService.AddBook(book, doRefresh);

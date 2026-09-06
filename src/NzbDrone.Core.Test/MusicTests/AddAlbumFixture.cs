@@ -140,6 +140,48 @@ namespace NzbDrone.Core.Test.MusicTests
         }
 
         [Test]
+        public void should_monitor_the_author_when_a_monitored_book_is_added()
+        {
+            var dbAuthor = Builder<Author>.CreateNew().With(a => a.Monitored = false).Build();
+
+            var newBook = BookToAdd("edition", "book", "author");
+            newBook.Monitored = true;
+
+            GivenValidBook("book", "edition");
+            GivenValidPath();
+
+            Mocker.GetMock<IAuthorService>()
+                .Setup(s => s.FindById(It.IsAny<string>()))
+                .Returns(dbAuthor);
+
+            Subject.AddBook(newBook);
+
+            Mocker.GetMock<IAuthorService>()
+                .Verify(v => v.UpdateAuthor(It.Is<Author>(a => a.Monitored)), Times.Once());
+        }
+
+        [Test]
+        public void should_leave_the_author_alone_for_an_unmonitored_book()
+        {
+            var dbAuthor = Builder<Author>.CreateNew().With(a => a.Monitored = false).Build();
+
+            var newBook = BookToAdd("edition", "book", "author");
+            newBook.Monitored = false;
+
+            GivenValidBook("book", "edition");
+            GivenValidPath();
+
+            Mocker.GetMock<IAuthorService>()
+                .Setup(s => s.FindById(It.IsAny<string>()))
+                .Returns(dbAuthor);
+
+            Subject.AddBook(newBook);
+
+            Mocker.GetMock<IAuthorService>()
+                .Verify(v => v.UpdateAuthor(It.IsAny<Author>()), Times.Never());
+        }
+
+        [Test]
         public void should_throw_if_book_cannot_be_found()
         {
             var newBook = BookToAdd("edition", "book", "author");
