@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using NLog;
 using NLog.Config;
@@ -56,7 +56,9 @@ namespace NzbDrone.Test.Common
 
             fileTarget.Name = "Test File Logger";
             fileTarget.FileName = Path.Combine(TestContext.CurrentContext.WorkDirectory, "TestLog.txt");
-            fileTarget.AutoFlush = false;
+            // Buffering loses exactly the lines that matter when a run is killed
+            // mid-test, which is the case this log exists for.
+            fileTarget.AutoFlush = true;
             fileTarget.KeepFileOpen = true;
             fileTarget.ConcurrentWrites = true;
             fileTarget.ConcurrentWriteAttemptDelay = 50;

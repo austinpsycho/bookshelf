@@ -98,6 +98,12 @@ jobs:
           # progress, instead of leaving a log that just stops. Writes a
           # Sequence.xml naming it, uploaded below.
           EXTRA_TEST_PARAMS: "--blame-hang --blame-hang-timeout 300s"
+          # NLog writes every trace line synchronously to stdout, which in CI is a
+          # pipe into vstest. When that pipe fills and stops being drained the
+          # write blocks and the run stops dead at an arbitrary line. Log to a
+          # file instead and upload it, so the trace is kept without stdout
+          # carrying tens of thousands of lines.
+          READARR_TESTS_LOG_OUTPUT: File
 
       - name: Upload hang diagnostics
         uses: actions/upload-artifact@v4
@@ -107,6 +113,7 @@ jobs:
           path: |
             **/*Sequence.xml
             **/TestResult.xml
+            **/TestLog.txt
           if-no-files-found: ignore
 
       - name: Report test results
